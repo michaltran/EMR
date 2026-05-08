@@ -490,3 +490,9 @@ storage/
 *.key
 appsettings.Production.json
 appsettings.local.json
+
+# HSBA m?u th?t - không bao gi? commit (ch?a PII)
+hsba_samples/
+!hsba_samples/README.txt
+private/
+docs/lessons-from-real-hsba.md

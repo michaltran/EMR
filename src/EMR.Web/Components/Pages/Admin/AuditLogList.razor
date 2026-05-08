@@ -1,0 +1,70 @@
+@page "/admin/audit"
+@attribute [Authorize(Roles = "ADMIN")]
+@rendermode InteractiveServer
+@inject AuditService AuditSvc
+
+<PageTitle>Nhật ký kiểm tra</PageTitle>
+
+<section class="page-head">
+    <h1>Nhật ký kiểm tra (Audit log)</h1>
+</section>
+
+<div class="card">
+    <div class="form-row">
+        <input @bind="actor" placeholder="Tên người thực hiện..." />
+        <select @bind="hanhDong">
+            <option value="">— Mọi hành động —</option>
+            @foreach (var a in actions)
+            {
+                <option value="@a">@a</option>
+            }
+        </select>
+        <input type="date" @bind="tu" />
+        <input type="date" @bind="den" />
+        <button class="btn btn-primary" @onclick="Reload">Lọc</button>
+    </div>
+</div>
+
+@if (items is null) { <p>Đang tải…</p> }
+else
+{
+    <table class="data-table" style="margin-top:1rem">
+        <thead>
+            <tr><th>Thời gian (UTC)</th><th>Người</th><th>Hành động</th><th>Đối tượng</th><th>IP</th><th>Chi tiết</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var a in items)
+            {
+                <tr>
+                    <td><code>@a.ThoiGian:yyyy-MM-dd HH:mm:ss</code></td>
+                    <td>@a.ActorTen</td>
+                    <td><span class="role-pill">@a.HanhDong</span></td>
+                    <td>@a.LoaiDoiTuong @if (a.DoiTuongId is not null) { <code class="muted small">@a.DoiTuongId.Value.ToString().Substring(0,8)</code> }</td>
+                    <td><code class="small">@a.IpAddress</code></td>
+                    <td><code class="small">@a.Chitiet</code></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <p class="muted small">Hiển thị tối đa 200 bản ghi gần nhất khớp tiêu chí.</p>
+}
+
+@code {
+    private List<AuditLogVM>? items;
+    private List<string> actions = [];
+    private string? actor;
+    private string? hanhDong;
+    private DateTime? tu;
+    private DateTime? den;
+
+    protected override async Task OnInitializedAsync()
+    {
+        actions = await AuditSvc.GetAllActionsAsync();
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        items = await AuditSvc.ListAsync(actor, string.IsNullOrEmpty(hanhDong) ? null : hanhDong, tu, den, take: 200);
+    }
+}

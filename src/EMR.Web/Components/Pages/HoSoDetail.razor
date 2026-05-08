@@ -38,8 +38,26 @@ else
         </div>
 
         <div class="card">
-            <h3>Tổng quan biểu mẫu</h3>
+            <h3>Tổng quan workflow</h3>
+            @{
+                var (duDk, thieuBM, thieuCK) = WorkflowRules.DanhGiaHoanTat(vm.HoSo);
+            }
             <p class="muted">@vm.TaiLieus.Count tài liệu — @vm.TaiLieus.Count(t => t.TrangThaiKy == TrangThaiKyTaiLieu.DaKy) đã ký</p>
+            @if (duDk)
+            {
+                <div class="alert alert-info">✓ Hồ sơ đã đủ chữ ký theo workflow.</div>
+            }
+            else
+            {
+                @if (thieuBM.Length > 0)
+                {
+                    <div class="alert alert-error">Thiếu biểu mẫu bắt buộc: @string.Join(", ", thieuBM)</div>
+                }
+                @if (thieuCK.Length > 0)
+                {
+                    <div class="alert alert-error">Biểu mẫu chưa đủ chữ ký: @string.Join(", ", thieuCK)</div>
+                }
+            }
             @if (lastError is not null)
             {
                 <div class="alert alert-error">@lastError</div>
@@ -52,26 +70,48 @@ else
     </div>
 
     <div class="card" style="margin-top:1rem">
-        <h3>Biểu mẫu trong hồ sơ</h3>
-        <table class="data-table">
-            <thead>
-            <tr>
-                <th>Loại biểu mẫu</th>
-                <th>File</th>
-                <th>Trạng thái</th>
-                <th>Chữ ký</th>
-                <th>Hành động</th>
-            </tr>
-            </thead>
-            <tbody>
-            @foreach (var bm in BieuMauCatalog.Items)
+        <div class="page-head" style="margin-bottom:.75rem">
+            <h3 style="margin:0">Biểu mẫu trong hồ sơ — theo TT 32/2023/TT-BYT</h3>
+            <div class="actions">
+                <input @bind="bmFilter" @bind:event="oninput" placeholder="Lọc theo tên biểu mẫu hoặc mã BYT..." class="input-search" />
+                <label class="muted small" style="display:flex;align-items:center;gap:.25rem">
+                    <input type="checkbox" @bind="onlyImported" /> Chỉ hiện biểu mẫu đã có file
+                </label>
+            </div>
+        </div>
+
+        @foreach (var grp in BieuMauCatalog.GroupedForUI())
+        {
+            var groupItems = grp.Where(MatchesFilter).ToList();
+            var visibleItems = groupItems.Where(bm => !onlyImported || vm.TaiLieus.Any(t => t.LoaiTaiLieu == bm.Ma)).ToList();
+            if (visibleItems.Count == 0) continue;
+
+            <details open="@OpenGroup(grp.Key, visibleItems)" class="bm-group">
+                <summary>
+                    <strong>@BieuMauCatalog.GroupLabel(grp.Key)</strong>
+                    <span class="muted small">(@visibleItems.Count(bm => vm.TaiLieus.Any(t => t.LoaiTaiLieu == bm.Ma))/@visibleItems.Count đã có)</span>
+                </summary>
+                <table class="data-table" style="margin-top:.5rem">
+                    <thead>
+                    <tr>
+                        <th>Mã BYT</th>
+                        <th>Tên biểu mẫu</th>
+                        <th>File</th>
+                        <th>Trạng thái</th>
+                        <th>Chữ ký</th>
+                        <th>Hành động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+            @foreach (var bm in visibleItems)
             {
                 var existing = vm.TaiLieus.Where(t => t.LoaiTaiLieu == bm.Ma).ToList();
                 @if (existing.Count == 0)
                 {
                     <tr>
+                        <td><code>@bm.MaBYT</code></td>
                         <td>
-                            <strong>@bm.Ten</strong>
+                            <strong>@bm.Ten</strong>@if (bm.BatBuoc) { <span class="badge-required" title="Bắt buộc trong HSBA">*</span> }
                             <div class="muted small">@bm.MoTa</div>
                         </td>
                         <td><span class="muted">— chưa có —</span></td>
@@ -87,8 +127,9 @@ else
                     foreach (var t in existing)
                     {
                         <tr>
+                            <td><code>@bm.MaBYT</code></td>
                             <td>
-                                <strong>@bm.Ten</strong>
+                                <strong>@bm.Ten</strong>@if (bm.BatBuoc) { <span class="badge-required">*</span> }
                                 <div class="muted small">@t.TenFile (@FormatSize(t.KichThuoc))</div>
                             </td>
                             <td>
@@ -125,21 +166,39 @@ else
                                 }
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-primary" disabled="@(busyTaiLieu == t.Id)"
-                                        @onclick="() => Sign(t.Id, bm.VaiTroKyChinh)">
-                                    @(busyTaiLieu == t.Id ? "Đang ký…" : $"Ký ({bm.VaiTroKyChinh})")
-                                </button>
+                                @{
+                                    var avail = WorkflowRules.KiemTraQuyenKy(t, userRoles, currentUserId, vm.HoSo.KhoaId, currentUserKhoaId);
+                                }
+                                @if (avail.VaiTroKyKeTiep is null)
+                                {
+                                    <span class="muted small">Đã đủ chữ ký</span>
+                                }
+                                else if (avail.LyDoChan is null)
+                                {
+                                    <button class="btn btn-sm btn-primary" disabled="@(busyTaiLieu == t.Id)"
+                                            @onclick="() => Sign(t.Id, avail.VaiTroKyKeTiep)">
+                                        @(busyTaiLieu == t.Id ? "Đang ký…" : $"Ký ({avail.VaiTroKyKeTiep})")
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="muted small" title="@avail.LyDoChan">Cần @avail.VaiTroKyKeTiep ký</span>
+                                }
                                 <button class="btn btn-sm" @onclick="() => OpenViewer(t.Id)">Xem</button>
                             </td>
                         </tr>
                     }
                 }
             }
-            </tbody>
-        </table>
+                    </tbody>
+                </table>
+            </details>
+        }
+
         <p class="muted small" style="margin-top:.5rem">
-            Mọi biểu mẫu đều có thể có nhiều chữ ký (BS → TK → LĐ). Nút "Ký" sẽ ký với vai trò chính của loại biểu mẫu;
-            sau đó cấp khác có thể tiếp tục ký vào cùng tài liệu.
+            <span class="badge-required">*</span> = biểu mẫu bắt buộc trong HSBA nội trú điển hình.
+            Workflow ký mặc định: BS → TK → LĐ; nút "Ký" tự xác định vai trò kế tiếp theo TT 32/2023/TT-BYT.
+            <a href="/regulations" target="_blank">Xem tham chiếu pháp lý</a>
         </p>
     </div>
 
@@ -161,6 +220,38 @@ else
     private string? lastInfo;
     private Guid? busyTaiLieu;
     private Guid? viewerTaiLieuId;
+    private List<string> userRoles = [];
+    private Guid currentUserId;
+    private Guid? currentUserKhoaId;
+    private string bmFilter = "";
+    private bool onlyImported = false;
+
+    private bool MatchesFilter(BieuMauTemplate bm)
+    {
+        if (string.IsNullOrWhiteSpace(bmFilter)) return true;
+        var k = bmFilter.Trim().ToLowerInvariant();
+        return bm.Ten.ToLowerInvariant().Contains(k)
+            || (bm.MaBYT?.ToLowerInvariant().Contains(k) ?? false)
+            || bm.Ma.ToLowerInvariant().Contains(k);
+    }
+
+    private bool OpenGroup(string groupKey, IEnumerable<BieuMauTemplate> items)
+    {
+        // Mở group nếu có file đã upload, hoặc đang filter, hoặc group quan trọng (Khám vào viện, Bệnh án)
+        if (!string.IsNullOrWhiteSpace(bmFilter)) return true;
+        if (vm is null) return false;
+        if (items.Any(bm => vm.TaiLieus.Any(t => t.LoaiTaiLieu == bm.Ma))) return true;
+        return groupKey is BieuMauCatalog.GROUP_KHAM_VAO_VIEN or BieuMauCatalog.GROUP_BENH_AN;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        currentUserId = Guid.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        userRoles = auth.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
+        var khoa = auth.User.FindFirst("khoaId")?.Value;
+        if (Guid.TryParse(khoa, out var k)) currentUserKhoaId = k;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -173,11 +264,7 @@ else
         if (vm is null) Nav.NavigateTo("/hoso");
     }
 
-    private async Task<Guid> CurrentUserId()
-    {
-        var auth = await AuthState.GetAuthenticationStateAsync();
-        return Guid.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-    }
+    private Task<Guid> CurrentUserId() => Task.FromResult(currentUserId);
 
     private async Task OnImport(InputFileChangeEventArgs e, string loaiTL)
     {
@@ -207,8 +294,7 @@ else
         busyTaiLieu = taiLieuId;
         try
         {
-            var uid = await CurrentUserId();
-            var (ok, err) = await Svc.KyTaiLieuAsync(Id, taiLieuId, vaiTroKy, uid);
+            var (ok, err) = await Svc.KyTaiLieuAsync(Id, taiLieuId, vaiTroKy, currentUserId, userRoles);
             if (ok) lastInfo = $"Đã ký với vai trò {vaiTroKy}";
             else lastError = "Ký thất bại: " + err;
             await Reload();

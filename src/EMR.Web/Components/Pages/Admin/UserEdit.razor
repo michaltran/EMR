@@ -1,0 +1,192 @@
+@page "/admin/users/new"
+@page "/admin/users/{Id:guid}"
+@attribute [Authorize(Roles = "ADMIN")]
+@rendermode InteractiveServer
+@inject UserService UserSvc
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>@(IsNew ? "Tạo user" : "Sửa user")</PageTitle>
+
+<section class="page-head">
+    <div>
+        <a href="/admin/users" class="btn-link">‹ Danh sách</a>
+        <h1>@(IsNew ? "Tạo người dùng" : "Sửa người dùng")</h1>
+    </div>
+</section>
+
+@if (loading) { <p>Đang tải…</p> }
+else if (model is null) { <div class="alert alert-error">Không tìm thấy user.</div> }
+else
+{
+    <div class="card" style="max-width:720px">
+        @if (error is not null) { <div class="alert alert-error">@error</div> }
+        @if (info is not null) { <div class="alert alert-info">@info</div> }
+
+        <div class="grid-2">
+            <label>
+                <span>Tên đăng nhập *</span>
+                <input @bind="model.TenDangNhap" disabled="@(!IsNew)" required />
+            </label>
+            <label>
+                <span>Trạng thái</span>
+                <select @bind="model.TrangThai">
+                    <option value="1">Hoạt động</option>
+                    <option value="0">Khóa</option>
+                </select>
+            </label>
+            <label>
+                <span>Họ và tên *</span>
+                <input @bind="model.HoTen" required />
+            </label>
+            <label>
+                <span>CCCD <small class="muted">(map sang user_id của SmartCA)</small></span>
+                <input @bind="model.CCCD" maxlength="20" />
+            </label>
+            <label>
+                <span>Email</span>
+                <input @bind="model.Email" type="email" />
+            </label>
+            <label>
+                <span>Số điện thoại</span>
+                <input @bind="model.SoDienThoai" maxlength="20" />
+            </label>
+            <label>
+                <span>Khoa</span>
+                <select @bind="model.KhoaId">
+                    <option value="">— Không thuộc khoa nào (lãnh đạo BV) —</option>
+                    @foreach (var k in khoas)
+                    {
+                        <option value="@k.Id">@k.Ten</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        <h3 style="margin-top:1rem">Vai trò</h3>
+        <div class="role-checks">
+            @foreach (var v in vaiTros)
+            {
+                var checkedNow = model.VaiTros.Contains(v.Id.ToString());
+                <label class="role-check">
+                    <input type="checkbox" checked="@checkedNow" @onchange="e => ToggleRole(v.Id, (bool)e.Value!)" />
+                    <strong>@v.Ma</strong> — @v.Ten
+                    @if (!string.IsNullOrEmpty(v.MoTa)) { <span class="muted small"> · @v.MoTa</span> }
+                </label>
+            }
+        </div>
+
+        @if (IsNew)
+        {
+            <label>
+                <span>Mật khẩu khởi tạo *</span>
+                <input type="password" @bind="newPassword" />
+            </label>
+        }
+
+        <div style="margin-top:1rem;display:flex;gap:.5rem">
+            <button class="btn btn-primary" @onclick="Save" disabled="@busy">@(busy ? "Đang lưu..." : (IsNew ? "Tạo user" : "Lưu thay đổi"))</button>
+            @if (!IsNew)
+            {
+                <button class="btn" @onclick="OpenReset">Reset mật khẩu</button>
+            }
+            <a href="/admin/users" class="btn btn-link">Hủy</a>
+        </div>
+
+        @if (showResetDialog)
+        {
+            <div class="card" style="margin-top:1rem;background:#fffaf0">
+                <h3>Reset mật khẩu</h3>
+                <label>
+                    <span>Mật khẩu mới (≥ 6 ký tự) *</span>
+                    <input type="password" @bind="resetPwd" />
+                </label>
+                <button class="btn btn-primary" @onclick="DoReset" disabled="@busy">Xác nhận reset</button>
+                <button class="btn btn-link" @onclick="() => showResetDialog = false">Đóng</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    private bool IsNew => Id is null;
+
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+    private string? info;
+    private UserEditModel? model;
+    private List<Khoa> khoas = [];
+    private List<VaiTro> vaiTros = [];
+    private string newPassword = "";
+    private bool showResetDialog;
+    private string resetPwd = "";
+    private Guid actorId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        actorId = Guid.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        khoas = await UserSvc.GetKhoasAsync();
+        vaiTros = await UserSvc.GetVaiTrosAsync();
+        if (IsNew)
+        {
+            model = new UserEditModel();
+        }
+        else
+        {
+            model = await UserSvc.GetAsync(Id!.Value);
+        }
+        loading = false;
+    }
+
+    private void ToggleRole(Guid vaiTroId, bool isChecked)
+    {
+        if (model is null) return;
+        var s = vaiTroId.ToString();
+        var list = model.VaiTros.ToList();
+        if (isChecked) { if (!list.Contains(s)) list.Add(s); }
+        else list.Remove(s);
+        model.VaiTros = list.ToArray();
+    }
+
+    private async Task Save()
+    {
+        if (model is null) return;
+        busy = true; error = info = null;
+        try
+        {
+            if (IsNew)
+            {
+                var (ok, err, id) = await UserSvc.CreateAsync(model, newPassword, actorId);
+                if (ok) Nav.NavigateTo($"/admin/users/{id}");
+                else error = err;
+            }
+            else
+            {
+                var (ok, err) = await UserSvc.UpdateAsync(model, actorId);
+                info = ok ? "Đã lưu." : null;
+                error = err;
+            }
+        }
+        finally { busy = false; }
+    }
+
+    private void OpenReset() { showResetDialog = true; resetPwd = ""; }
+
+    private async Task DoReset()
+    {
+        if (model?.Id is null) return;
+        busy = true; error = info = null;
+        try
+        {
+            var (ok, err) = await UserSvc.ResetPasswordAsync(model.Id.Value, resetPwd, actorId);
+            info = ok ? "Đã reset mật khẩu." : null;
+            error = err;
+            if (ok) showResetDialog = false;
+        }
+        finally { busy = false; }
+    }
+}

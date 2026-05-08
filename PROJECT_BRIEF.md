@@ -111,8 +111,10 @@ Chia nhỏ:
 - [x] Seed bệnh nhân + lần khám demo trong eHospital_Demo (10 BN, ~20 lần khám)
 - [x] Seed 5 user demo: `admin/admin@123`, `bs.an/bs@123`, `tk.binh/tk@123` (BS+TK), `ld.cuong/ld@123` (LĐ BV), `khth.dung/khth@123` (KHTH)
 - [x] **Vertical slice #1 backend xong**: JWT login → HIS lookup → upload PDF → tạo hồ sơ (mã `26.000002`) → ký self-signed → verify chữ ký valid (smoke test pass 2026-05-08)
-- [x] **Web Admin (Blazor Server) xong (Phase A)**: cookie auth, /hoso list, /hoso/moi tạo, /hoso/{id} chi tiết với 11 biểu mẫu chuẩn, nút Import PDF + nút Ký + inline PDF viewer
-- [x] Git repo: https://github.com/michaltran/EMR (đã push 2 commits)
+- [x] **Web Admin (Blazor Server) xong (Phase A)**: cookie auth, /hoso list, /hoso/moi tạo, /hoso/{id} chi tiết với danh mục biểu mẫu chuẩn, nút Import PDF + nút Ký + inline PDF viewer
+- [x] **Phase C — Workflow ký nhiều cấp**: rule BS→TK→LĐ theo mỗi loại biểu mẫu, button Ký disable + lý do, dashboard hiện thiếu biểu mẫu/chữ ký, auto chuyển trạng thái HSBA (`WorkflowRules.cs`)
+- [x] **Compliance TT 13/2025 + TT 32/2023**: viết `docs/regulations.md`, expand `BieuMauCatalog` từ 11 → **67 mẫu chuẩn** (24 BA Phụ lục XXVIII + 41 phiếu y Phụ lục XXIX + 2 khác), UI group theo nhóm + filter, trang `/regulations` tóm tắt
+- [x] Git repo: https://github.com/michaltran/EMR (đã push 3 commits)
 - [ ] EMR.Mobile (.NET MAUI) — chưa tạo, demo PDF download bằng Postman/Swagger trước
 - [ ] PAdES embed thật vào PDF (hiện mới logical sign — lưu signature trong DB) — sau khi có VNPT-CA
 - [ ] Webhook endpoint cho VNPT SmartCA — sau khi có tài khoản UAT
@@ -139,4 +141,4 @@ Chia nhỏ:
 
 - File danh mục: `Danh Muc BV LC 08052026.xlsx` (user gửi qua chat, không có sẵn ở folder dự án — nên xin user upload lại nếu cần)
 - HIS cũ: `D:\BIN_new\` (read-only reference)
-- Pháp lý: Nghị định 130/2018/NĐ-CP (chữ ký số), Thông tư 46/2018/TT-BYT (bệnh án điện tử), Nghị định 13/2023 (dữ liệu cá nhân)
+- Pháp lý: xem [docs/regulations.md](docs/regulations.md). Văn bản chính: **TT 13/2025/TT-BYT** (HSBA điện tử, thay thế TT 46/2018) + **TT 32/2023/TT-BYT** Chương X & Phụ lục XXVIII/XXIX (82 mẫu chuẩn). Còn lại: Luật KBCB 2023, Luật GDDT 2023, NĐ 13/2023 (DLCN), NĐ 137/2024.

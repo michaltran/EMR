@@ -1,0 +1,53 @@
+@page "/regulations"
+@attribute [Authorize]
+
+<PageTitle>Tham chiếu pháp lý</PageTitle>
+
+<section class="page-head">
+    <div>
+        <a href="/hoso" class="btn-link">‹ Hồ sơ</a>
+        <h1>Tham chiếu pháp lý</h1>
+    </div>
+</section>
+
+<div class="card">
+    <h3>Văn bản chính áp dụng</h3>
+    <ul>
+        <li><strong>TT 13/2025/TT-BYT</strong> (06/06/2025, hiệu lực 21/07/2025) — Hướng dẫn triển khai hồ sơ bệnh án điện tử (thay thế TT 46/2018/TT-BYT)</li>
+        <li><strong>TT 32/2023/TT-BYT</strong> — Quy định chi tiết Luật KBCB; Chương X, Phụ lục XXVIII (24 mẫu bệnh án), XXIX (53 mẫu giấy/phiếu)</li>
+        <li><strong>Luật KBCB 2023</strong> (15/2023/QH15) — Điều 69 (HSBA)</li>
+        <li><strong>Luật GDDT 2023</strong> (20/2023/QH15) — Điều 22 (xác nhận điện tử)</li>
+        <li><strong>NĐ 13/2023/NĐ-CP</strong> — Bảo vệ DLCN</li>
+    </ul>
+</div>
+
+<div class="card" style="margin-top:1rem">
+    <h3>3 hình thức ký số được TT 13/2025 chấp nhận</h3>
+    <ol>
+        <li><strong>Chữ ký điện tử hợp pháp</strong> — VNPT-CA, Viettel-CA, FPT-CA... (production)</li>
+        <li><strong>Sinh trắc học</strong> — vân tay, khuôn mặt, mống mắt (mobile)</li>
+        <li><strong>Phương tiện điện tử khác</strong> — OTP + password mạnh theo Luật GDDT</li>
+    </ol>
+    <p class="muted">EMR Liên Chiểu hiện dùng self-signed cert (mức dev). Production sẽ chuyển sang VNPT SmartCA.</p>
+</div>
+
+<div class="card" style="margin-top:1rem">
+    <h3>Lộ trình bắt buộc</h3>
+    <ul>
+        <li><strong>Bệnh viện</strong>: triển khai HSBA điện tử <strong>trước 30/9/2025</strong></li>
+        <li><strong>Cơ sở KCB khác</strong> (nội/ngoại trú/điều trị ban ngày): trước <strong>31/12/2026</strong></li>
+    </ul>
+</div>
+
+<div class="card" style="margin-top:1rem">
+    <h3>Yêu cầu compliance còn lại của hệ thống</h3>
+    <p class="muted">Xem chi tiết và tiến độ trong <code>docs/regulations.md</code>.</p>
+    <ul>
+        <li>⏳ Tích hợp VNPT SmartCA (đang chờ tài khoản UAT)</li>
+        <li>⏳ Đường dẫn ký sinh trắc cho mobile app</li>
+        <li>⏳ PAdES embed thật vào PDF (hiện logical sign)</li>
+        <li>⏳ Audit log immutable (WORM)</li>
+        <li>⏳ Đăng ký kết nối VNeID</li>
+        <li>⏳ Quy chế quản lý HSBA điện tử (TT 13/2025 Đ.6.3.b)</li>
+    </ul>
+</div>

@@ -35,6 +35,8 @@ builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddEmrInfrastructure(builder.Configuration);
 builder.Services.AddScoped<HoSoService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<AuditService>();
 
 var app = builder.Build();
 

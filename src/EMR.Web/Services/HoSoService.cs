@@ -130,14 +130,20 @@ public class HoSoService(
         return t.Id;
     }
 
-    public async Task<(bool Success, string? Error)> KyTaiLieuAsync(Guid hoSoId, Guid taiLieuId, string vaiTroKy, Guid nguoiKyId, CancellationToken ct = default)
+    public async Task<(bool Success, string? Error)> KyTaiLieuAsync(Guid hoSoId, Guid taiLieuId, string vaiTroKy, Guid nguoiKyId, IEnumerable<string> userRoles, CancellationToken ct = default)
     {
-        var t = await db.TaiLieus.Include(x => x.HoSoBenhAn)
+        var t = await db.TaiLieus.Include(x => x.HoSoBenhAn).ThenInclude(h => h.TaiLieus).ThenInclude(tt => tt.ChuKys)
+            .Include(x => x.ChuKys)
             .FirstOrDefaultAsync(x => x.Id == taiLieuId && x.HoSoBenhAnId == hoSoId, ct);
         if (t is null) return (false, "Tài liệu không tồn tại");
 
         var nk = await db.NguoiDungs.FirstAsync(u => u.Id == nguoiKyId, ct);
         if (string.IsNullOrEmpty(nk.CCCD)) return (false, "User chưa có CCCD");
+
+        // Workflow rule check
+        var avail = WorkflowRules.KiemTraQuyenKy(t, userRoles, nguoiKyId, t.HoSoBenhAn.KhoaId, nk.KhoaId);
+        if (avail.LyDoChan is not null) return (false, avail.LyDoChan);
+        if (avail.VaiTroKyKeTiep != vaiTroKy) return (false, $"Vai trò kế tiếp phải là {avail.VaiTroKyKeTiep}, không phải {vaiTroKy}");
 
         byte[] bytes;
         await using (var s = await storage.OpenReadAsync(t.DuongDanLuuTru, ct))
@@ -172,13 +178,7 @@ public class HoSoService(
             ck.NgayHoanTat = DateTime.UtcNow;
             t.TrangThaiKy = TrangThaiKyTaiLieu.DaKy;
 
-            t.HoSoBenhAn.TrangThai = vaiTroKy switch
-            {
-                "BACSI" => TrangThaiHoSo.DaKyBacSi,
-                "TRUONGKHOA" => TrangThaiHoSo.DaKyTruongKhoa,
-                "LANHDAO_BV" => TrangThaiHoSo.DaKyLanhDao,
-                _ => t.HoSoBenhAn.TrangThai
-            };
+            t.HoSoBenhAn.TrangThai = WorkflowRules.TinhTrangThaiHoSo(t.HoSoBenhAn);
             t.HoSoBenhAn.NgayCapNhat = DateTime.UtcNow;
 
             db.AuditLogs.Add(new AuditLog
@@ -210,6 +210,73 @@ public class HoSoService(
 
     public async Task<TaiLieu?> GetTaiLieuAsync(Guid hoSoId, Guid taiLieuId, CancellationToken ct = default) =>
         await db.TaiLieus.FirstOrDefaultAsync(x => x.Id == taiLieuId && x.HoSoBenhAnId == hoSoId, ct);
+
+    /// <summary>
+    /// Hủy 1 chữ ký (chỉ Admin). Chữ ký không bị xóa khỏi DB - đánh dấu Huy + LyDoLoi để giữ trail.
+    /// Tài liệu sẽ chuyển về ChuaKy nếu không còn chữ ký DaKy nào.
+    /// </summary>
+    public async Task<(bool Ok, string? Err)> HuyChuKyAsync(Guid chuKyId, Guid actorId, string lyDo, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(lyDo)) return (false, "Phải nhập lý do hủy");
+        var ck = await db.ChuKys.Include(x => x.TaiLieu).ThenInclude(t => t.HoSoBenhAn).ThenInclude(h => h.TaiLieus).ThenInclude(t => t.ChuKys)
+            .FirstOrDefaultAsync(x => x.Id == chuKyId, ct);
+        if (ck is null) return (false, "Không tìm thấy chữ ký");
+        if (ck.TrangThai != TrangThaiChuKy.DaKy) return (false, "Chỉ hủy chữ ký đã ký thành công");
+
+        ck.TrangThai = TrangThaiChuKy.Huy;
+        ck.LyDoLoi = lyDo;
+
+        // Tính lại trạng thái tài liệu
+        var conChuKy = ck.TaiLieu.ChuKys.Any(c => c.Id != ck.Id && c.TrangThai == TrangThaiChuKy.DaKy);
+        ck.TaiLieu.TrangThaiKy = conChuKy ? TrangThaiKyTaiLieu.DaKy : TrangThaiKyTaiLieu.ChuaKy;
+
+        ck.TaiLieu.HoSoBenhAn.TrangThai = WorkflowRules.TinhTrangThaiHoSo(ck.TaiLieu.HoSoBenhAn);
+        ck.TaiLieu.HoSoBenhAn.NgayCapNhat = DateTime.UtcNow;
+
+        db.AuditLogs.Add(new AuditLog
+        {
+            HanhDong = "HUY_CHU_KY",
+            ActorId = actorId,
+            LoaiDoiTuong = nameof(ChuKy),
+            DoiTuongId = ck.Id,
+            Chitiet = $$"""{"taiLieuId":"{{ck.TaiLieuId}}","vaiTro":"{{ck.VaiTroKy}}","lyDo":"{{lyDo.Replace("\"","'")}}"}"""
+        });
+
+        await db.SaveChangesAsync(ct);
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Xóa 1 tài liệu (chỉ khi chưa có chữ ký).
+    /// </summary>
+    public async Task<(bool Ok, string? Err)> XoaTaiLieuAsync(Guid hoSoId, Guid taiLieuId, Guid actorId, CancellationToken ct = default)
+    {
+        var t = await db.TaiLieus.Include(x => x.ChuKys)
+            .FirstOrDefaultAsync(x => x.Id == taiLieuId && x.HoSoBenhAnId == hoSoId, ct);
+        if (t is null) return (false, "Không tìm thấy tài liệu");
+        if (t.ChuKys.Any(c => c.TrangThai == TrangThaiChuKy.DaKy))
+            return (false, "Tài liệu đã có chữ ký — không thể xóa. Hủy chữ ký trước (admin)");
+
+        // Xóa file
+        try
+        {
+            await storage.DeleteAsync(t.DuongDanLuuTru);
+        }
+        catch { /* ignore */ }
+
+        db.ChuKys.RemoveRange(t.ChuKys);
+        db.TaiLieus.Remove(t);
+        db.AuditLogs.Add(new AuditLog
+        {
+            HanhDong = "XOA_TAILIEU",
+            ActorId = actorId,
+            LoaiDoiTuong = nameof(TaiLieu),
+            DoiTuongId = t.Id,
+            Chitiet = $$"""{"hoSoId":"{{hoSoId}}","loaiTL":"{{t.LoaiTaiLieu}}","tenFile":"{{t.TenFile}}"}"""
+        });
+        await db.SaveChangesAsync(ct);
+        return (true, null);
+    }
 }
 
 public record HoSoListVM(Guid Id, string MaHoSo, string MaBenhNhanHIS, string HoTenBenhNhan, string KhoaTen, TrangThaiHoSo TrangThai, int SoTaiLieu, DateTime NgayTao);

@@ -104,6 +104,22 @@ label > span { font-weight: 500; font-size: 13px }
 .login-help summary { cursor: pointer; color: var(--c-muted) }
 .login-help ul { padding-left: 1.25rem; margin: .5rem 0 0 } .login-help code { background: #f1f3f5; padding: .05rem .25rem; border-radius: 3px }
 
+/* Biểu mẫu group */
+.bm-group { border: 1px solid var(--c-border); border-radius: 6px; margin-bottom: .75rem; background: #fff }
+.bm-group > summary { padding: .65rem 1rem; cursor: pointer; font-size: 14px; user-select: none; display: flex; gap: .5rem; align-items: center }
+.bm-group > summary:hover { background: var(--c-bg) }
+.bm-group[open] > summary { border-bottom: 1px solid var(--c-border) }
+.bm-group .data-table { border-radius: 0 }
+.bm-group .data-table th { background: #fafbfc }
+.badge-required { display: inline-block; color: var(--c-danger); font-weight: 700; margin-left: .15rem; cursor: help }
+
+/* Admin */
+.role-pill { display: inline-block; background: #eef5ff; color: #0a58ca; padding: .1rem .45rem; border-radius: 4px; font-size: 12px; margin-right: .2rem; font-family: monospace }
+.role-checks { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem .75rem }
+.role-check { display: flex; align-items: flex-start; gap: .4rem; padding: .35rem .5rem; border: 1px solid var(--c-border); border-radius: 6px; margin: 0; cursor: pointer }
+.role-check:hover { background: var(--c-bg) }
+.role-check input { margin-top: .2rem }
+
 /* Blazor error UI */
 #blazor-error-ui { background: #fff8c4; border-top: 1px solid #f1d92f; bottom: 0; box-shadow: 0 -1px 2px rgba(0,0,0,.2); display: none; left: 0; padding: .6rem 1.25rem; position: fixed; width: 100%; z-index: 1000 }
 #blazor-error-ui .dismiss { cursor: pointer; position: absolute; right: .75rem; top: .5rem }

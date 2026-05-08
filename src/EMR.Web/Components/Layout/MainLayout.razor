@@ -11,6 +11,13 @@
                 <Authorized>
                     <a href="/hoso">Hồ sơ bệnh án</a>
                     <a href="/hoso/moi">+ Tạo mới</a>
+                    <AuthorizeView Roles="ADMIN">
+                        <Authorized Context="adm">
+                            <a href="/admin/users">Người dùng</a>
+                            <a href="/admin/audit">Audit</a>
+                        </Authorized>
+                    </AuthorizeView>
+                    <a href="/regulations">Pháp lý</a>
                 </Authorized>
             </AuthorizeView>
         </nav>
