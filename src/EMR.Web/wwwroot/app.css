@@ -113,6 +113,24 @@ label > span { font-weight: 500; font-size: 13px }
 .bm-group .data-table th { background: #fafbfc }
 .badge-required { display: inline-block; color: var(--c-danger); font-weight: 700; margin-left: .15rem; cursor: help }
 
+/* Dashboard */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .75rem }
+.kpi { background: #fff; border: 1px solid var(--c-border); border-radius: 8px; padding: 1rem; text-align: center }
+.kpi-label { color: var(--c-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px }
+.kpi-value { font-size: 2rem; font-weight: 700; color: var(--c-primary); margin-top: .25rem }
+.kpi-good .kpi-value { color: var(--c-success) }
+.kpi-warn .kpi-value { color: var(--c-warn) }
+.bar { background: #f1f3f5; border-radius: 4px; height: 6px; width: 100px; display: inline-block; vertical-align: middle; margin-right: .5rem }
+.bar-fill { background: var(--c-success); height: 100%; border-radius: 4px }
+.chart { display: flex; gap: 2px; height: 160px; align-items: flex-end; padding-top: 1rem; border-bottom: 1px solid var(--c-border) }
+.chart-col { flex: 1; display: flex; gap: 1px; align-items: flex-end; min-width: 4px; height: 100% }
+.chart-bar { flex: 1; min-height: 1px; transition: opacity .15s }
+.chart-bar:hover { opacity: .7 }
+.bar-hs { background: var(--c-primary) }
+.bar-ck { background: var(--c-success) }
+.legend { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: .25rem }
+.legend-hs { background: var(--c-primary) } .legend-ck { background: var(--c-success) }
+
 /* Admin */
 .role-pill { display: inline-block; background: #eef5ff; color: #0a58ca; padding: .1rem .45rem; border-radius: 4px; font-size: 12px; margin-right: .2rem; font-family: monospace }
 .role-checks { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem .75rem }

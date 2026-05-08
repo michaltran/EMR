@@ -1,0 +1,134 @@
+@page "/dashboard"
+@attribute [Authorize]
+@inject BaoCaoService BC
+
+<PageTitle>Dashboard</PageTitle>
+
+<section class="page-head">
+    <h1>Dashboard tổng quan</h1>
+</section>
+
+@if (stats is null) { <p>Đang tải…</p> }
+else
+{
+    <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Tổng hồ sơ</div><div class="kpi-value">@stats.TongHoSo</div></div>
+        <div class="kpi kpi-good"><div class="kpi-label">Đã hoàn tất</div><div class="kpi-value">@stats.HoanTat</div></div>
+        <div class="kpi kpi-warn"><div class="kpi-label">Đang xử lý</div><div class="kpi-value">@stats.DangXuLy</div></div>
+        <div class="kpi"><div class="kpi-label">Nháp</div><div class="kpi-value">@stats.Draft</div></div>
+        <div class="kpi"><div class="kpi-label">Tài liệu đã ký</div><div class="kpi-value">@stats.TaiLieuDaKy</div></div>
+        <div class="kpi"><div class="kpi-label">Tài liệu chưa ký</div><div class="kpi-value">@stats.TaiLieuChuaKy</div></div>
+        <div class="kpi"><div class="kpi-label">Chữ ký 7 ngày</div><div class="kpi-value">@stats.ChuKy7Ngay</div></div>
+        <div class="kpi"><div class="kpi-label">HSBA mới 7 ngày</div><div class="kpi-value">@stats.HoSo7Ngay</div></div>
+        <div class="kpi"><div class="kpi-label">User hoạt động</div><div class="kpi-value">@stats.NguoiDungHoatDong</div></div>
+    </div>
+
+    <div class="grid-2" style="margin-top:1rem">
+        <div class="card">
+            <h3>Theo khoa / phòng</h3>
+            @if (khoaStats is null) { <p class="muted">…</p> }
+            else if (khoaStats.Count == 0) { <p class="muted">Chưa có dữ liệu</p> }
+            else
+            {
+                <table class="data-table">
+                    <thead><tr><th>Khoa</th><th>HSBA</th><th>Hoàn tất</th><th>Chữ ký</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var k in khoaStats)
+                    {
+                        var pctHt = k.SoHoSo == 0 ? 0 : k.SoHoanTat * 100 / k.SoHoSo;
+                        <tr>
+                            <td>@k.KhoaTen</td>
+                            <td>@k.SoHoSo</td>
+                            <td>@k.SoHoanTat</td>
+                            <td>@k.SoChuKy</td>
+                            <td><div class="bar"><div class="bar-fill" style="width:@(pctHt)%"></div></div><span class="muted small">@pctHt% hoàn tất</span></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <div class="card">
+            <h3>Trạng thái HSBA</h3>
+            @if (ttStats is null) { <p class="muted">…</p> }
+            else
+            {
+                <table class="data-table">
+                    <thead><tr><th>Trạng thái</th><th>Số lượng</th></tr></thead>
+                    <tbody>
+                    @foreach (var t in ttStats)
+                    {
+                        <tr><td>@t.TrangThai</td><td>@t.SoLuong</td></tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+        <h3>Top BS / Người ký nhiều nhất</h3>
+        @if (topBs is null) { <p class="muted">…</p> }
+        else if (topBs.Count == 0) { <p class="muted">Chưa có dữ liệu chữ ký</p> }
+        else
+        {
+            <table class="data-table">
+                <thead><tr><th>#</th><th>Họ tên</th><th>Khoa</th><th>Số chữ ký</th><th>Lần cuối ký</th></tr></thead>
+                <tbody>
+                @{ int i = 0; }
+                @foreach (var b in topBs)
+                {
+                    i++;
+                    <tr>
+                        <td>@i</td>
+                        <td><strong>@b.HoTen</strong></td>
+                        <td>@b.KhoaTen</td>
+                        <td>@b.SoChuKy</td>
+                        <td>@b.LanCuoi?.ToLocalTime():dd/MM/yyyy HH:mm</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+        <h3>Hoạt động 30 ngày qua</h3>
+        @if (timeSeries is null) { <p class="muted">…</p> }
+        else
+        {
+            var maxV = Math.Max(1, timeSeries.Max(p => Math.Max(p.HoSo, p.ChuKy)));
+            <div class="chart">
+                @foreach (var p in timeSeries)
+                {
+                    <div class="chart-col" title="@p.Ngay:dd/MM — HSBA: @p.HoSo, Chữ ký: @p.ChuKy">
+                        <div class="chart-bar bar-hs" style="height:@(p.HoSo*100/maxV)%"></div>
+                        <div class="chart-bar bar-ck" style="height:@(p.ChuKy*100/maxV)%"></div>
+                    </div>
+                }
+            </div>
+            <p class="muted small" style="margin-top:.5rem">
+                <span class="legend legend-hs"></span> HSBA mới
+                <span class="legend legend-ck" style="margin-left:.75rem"></span> Chữ ký
+            </p>
+        }
+    </div>
+}
+
+@code {
+    private DashboardStats? stats;
+    private List<KhoaStat>? khoaStats;
+    private List<BacSiStat>? topBs;
+    private List<TrangThaiStat>? ttStats;
+    private List<TimeSeriesPoint>? timeSeries;
+
+    protected override async Task OnInitializedAsync()
+    {
+        stats = await BC.DashboardAsync();
+        khoaStats = await BC.KhoaStatsAsync();
+        topBs = await BC.TopBacSiAsync(10);
+        ttStats = await BC.TrangThaiHoSoStatsAsync();
+        timeSeries = await BC.TimeSeries30DaysAsync();
+    }
+}

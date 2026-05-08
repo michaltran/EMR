@@ -37,6 +37,7 @@ builder.Services.AddEmrInfrastructure(builder.Configuration);
 builder.Services.AddScoped<HoSoService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<BaoCaoService>();
 
 var app = builder.Build();
 
