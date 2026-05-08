@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load credentials thật từ appsettings.local.json (ignore từ git)
+builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 

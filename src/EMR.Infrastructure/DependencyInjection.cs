@@ -22,18 +22,18 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddScoped<HoSoCodeGenerator>();
 
-        // Signing strategy: chọn theo VnptSmartCa:Enabled
+        // VNPT SmartCA settings + 2 clients (v1 và TH/v2)
         services.Configure<VnptSmartCaSettings>(config.GetSection("VnptSmartCa"));
         services.AddHttpClient<VnptSmartCaClient>();
+        services.AddHttpClient<VnptSmartCaThClient>();
 
+        // Signing strategy: chọn theo VnptSmartCa:Enabled + Mode
         services.AddSingleton<IDocumentSigner>(sp =>
         {
             var smartCaOpt = sp.GetRequiredService<IOptions<VnptSmartCaSettings>>().Value;
             if (smartCaOpt.Enabled)
             {
-                // VnptSmartCaSigner cần HttpClient + IOptions + Logger -> tạo qua scope khi cần
-                // Không thể giữ singleton scope của HttpClient → wrap thành scoped factory
-                return new SmartCaProxySigner(sp);
+                return new SmartCaProxySigner(sp, smartCaOpt.Mode);
             }
             return ActivatorUtilities.CreateInstance<SelfSignedDocumentSigner>(sp);
         });
@@ -43,22 +43,25 @@ public static class DependencyInjection
 }
 
 /// <summary>
-/// Wrapper để hỗ trợ HttpClient (scoped) trong context singleton IDocumentSigner.
-/// Mỗi lần gọi sẽ resolve VnptSmartCaSigner từ DI scope mới.
+/// Wrapper để giữ HttpClient (scoped) bên trong singleton IDocumentSigner.
 /// </summary>
-internal class SmartCaProxySigner(IServiceProvider sp) : IDocumentSigner
+internal class SmartCaProxySigner(IServiceProvider sp, string mode) : IDocumentSigner
 {
     public async Task<SignResult> SignHashAsync(byte[] sha256Hash, string signerCccd, string signerHoTen, CancellationToken ct = default)
     {
         using var scope = sp.CreateScope();
-        var inner = ActivatorUtilities.CreateInstance<VnptSmartCaSigner>(scope.ServiceProvider);
+        IDocumentSigner inner = mode.Equals("TH", StringComparison.OrdinalIgnoreCase)
+            ? ActivatorUtilities.CreateInstance<VnptSmartCaThSigner>(scope.ServiceProvider)
+            : ActivatorUtilities.CreateInstance<VnptSmartCaSigner>(scope.ServiceProvider);
         return await inner.SignHashAsync(sha256Hash, signerCccd, signerHoTen, ct);
     }
 
     public async Task<VerifyResult> VerifyAsync(byte[] sha256Hash, string signatureBase64, string certSubject, CancellationToken ct = default)
     {
         using var scope = sp.CreateScope();
-        var inner = ActivatorUtilities.CreateInstance<VnptSmartCaSigner>(scope.ServiceProvider);
+        IDocumentSigner inner = mode.Equals("TH", StringComparison.OrdinalIgnoreCase)
+            ? ActivatorUtilities.CreateInstance<VnptSmartCaThSigner>(scope.ServiceProvider)
+            : ActivatorUtilities.CreateInstance<VnptSmartCaSigner>(scope.ServiceProvider);
         return await inner.VerifyAsync(sha256Hash, signatureBase64, certSubject, ct);
     }
 }
