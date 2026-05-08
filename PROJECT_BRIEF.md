@@ -111,6 +111,8 @@ Chia nhỏ:
 - [x] Seed bệnh nhân + lần khám demo trong eHospital_Demo (10 BN, ~20 lần khám)
 - [x] Seed 5 user demo: `admin/admin@123`, `bs.an/bs@123`, `tk.binh/tk@123` (BS+TK), `ld.cuong/ld@123` (LĐ BV), `khth.dung/khth@123` (KHTH)
 - [x] **Vertical slice #1 backend xong**: JWT login → HIS lookup → upload PDF → tạo hồ sơ (mã `26.000002`) → ký self-signed → verify chữ ký valid (smoke test pass 2026-05-08)
+- [x] **Web Admin (Blazor Server) xong (Phase A)**: cookie auth, /hoso list, /hoso/moi tạo, /hoso/{id} chi tiết với 11 biểu mẫu chuẩn, nút Import PDF + nút Ký + inline PDF viewer
+- [x] Git repo: https://github.com/michaltran/EMR (đã push 2 commits)
 - [ ] EMR.Mobile (.NET MAUI) — chưa tạo, demo PDF download bằng Postman/Swagger trước
 - [ ] PAdES embed thật vào PDF (hiện mới logical sign — lưu signature trong DB) — sau khi có VNPT-CA
 - [ ] Webhook endpoint cho VNPT SmartCA — sau khi có tài khoản UAT
