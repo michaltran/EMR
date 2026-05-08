@@ -66,14 +66,34 @@ public class BaoCaoService(EmrDbContext db)
 
     public async Task<List<BacSiStat>> TopBacSiAsync(int top = 10, CancellationToken ct = default)
     {
-        return await db.ChuKys
+        var groups = await db.ChuKys
             .Where(c => c.TrangThai == TrangThaiChuKy.DaKy)
-            .Include(c => c.NguoiKy).ThenInclude(u => u.Khoa)
-            .GroupBy(c => new { c.NguoiKyId, c.NguoiKy.HoTen, KhoaTen = c.NguoiKy.Khoa != null ? c.NguoiKy.Khoa.Ten : "—" })
-            .Select(g => new BacSiStat(g.Key.HoTen, g.Key.KhoaTen, g.Count(), g.Max(c => (DateTime?)c.NgayHoanTat)))
-            .OrderByDescending(x => x.SoChuKy)
+            .GroupBy(c => c.NguoiKyId)
+            .Select(g => new
+            {
+                NguoiKyId = g.Key,
+                SoChuKy = g.Count(),
+                LanCuoi = g.Max(c => (DateTime?)c.NgayHoanTat)
+            })
+            .OrderByDescending(g => g.SoChuKy)
             .Take(top)
             .ToListAsync(ct);
+
+        var ids = groups.Select(g => g.NguoiKyId).ToList();
+        var users = await db.NguoiDungs
+            .Include(u => u.Khoa)
+            .Where(u => ids.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, ct);
+
+        return groups.Select(g =>
+        {
+            users.TryGetValue(g.NguoiKyId, out var u);
+            return new BacSiStat(
+                u?.HoTen ?? "—",
+                u?.Khoa?.Ten ?? "—",
+                g.SoChuKy,
+                g.LanCuoi);
+        }).ToList();
     }
 
     public async Task<List<TrangThaiStat>> TrangThaiHoSoStatsAsync(CancellationToken ct = default)

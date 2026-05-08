@@ -1,0 +1,77 @@
+@page "/profile"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject UserService Svc
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Tài khoản của tôi</PageTitle>
+
+<section class="page-head">
+    <h1>Tài khoản của tôi</h1>
+</section>
+
+<div class="card" style="max-width:560px">
+    <h3>Thông tin cá nhân</h3>
+    <dl class="kv">
+        <dt>Họ tên</dt><dd><strong>@hoTen</strong></dd>
+        <dt>Tên đăng nhập</dt><dd><code>@username</code></dd>
+        <dt>CCCD</dt><dd><code>@cccd</code> <span class="muted small">(map sang user_id của VNPT SmartCA)</span></dd>
+        <dt>Khoa/Phòng</dt><dd>@khoaTen</dd>
+        <dt>Vai trò</dt><dd>@foreach (var r in roles) { <span class="role-pill">@r</span> }</dd>
+    </dl>
+</div>
+
+<div class="card" style="margin-top:1rem;max-width:560px">
+    <h3>Đổi mật khẩu</h3>
+    @if (info is not null) { <div class="alert alert-info">@info</div> }
+    @if (err is not null) { <div class="alert alert-error">@err</div> }
+    <label>
+        <span>Mật khẩu hiện tại *</span>
+        <input type="password" @bind="oldPwd" />
+    </label>
+    <label>
+        <span>Mật khẩu mới (≥ 6 ký tự) *</span>
+        <input type="password" @bind="newPwd" />
+    </label>
+    <label>
+        <span>Nhập lại mật khẩu mới *</span>
+        <input type="password" @bind="newPwd2" />
+    </label>
+    <button class="btn btn-primary" @onclick="Doi" disabled="@busy">@(busy ? "Đang đổi..." : "Đổi mật khẩu")</button>
+</div>
+
+@code {
+    private string hoTen = "", username = "", cccd = "", khoaTen = "";
+    private List<string> roles = [];
+    private Guid uid;
+    private string oldPwd = "", newPwd = "", newPwd2 = "";
+    private string? info;
+    private string? err;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        var u = auth.User;
+        uid = Guid.Parse(u.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+        username = u.Identity?.Name ?? "";
+        hoTen = u.FindFirst("hoTen")?.Value ?? "";
+        cccd = u.FindFirst("cccd")?.Value ?? "(chưa có)";
+        khoaTen = u.FindFirst("khoaTen")?.Value ?? "—";
+        roles = u.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
+    }
+
+    private async Task Doi()
+    {
+        info = err = null;
+        if (newPwd != newPwd2) { err = "Mật khẩu mới nhập lại không khớp"; return; }
+        busy = true;
+        try
+        {
+            var (ok, e) = await Svc.DoiMatKhauAsync(uid, oldPwd, newPwd);
+            if (ok) { info = "Đã đổi mật khẩu thành công."; oldPwd = newPwd = newPwd2 = ""; }
+            else err = e;
+        }
+        finally { busy = false; }
+    }
+}

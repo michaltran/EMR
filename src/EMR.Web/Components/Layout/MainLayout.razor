@@ -2,10 +2,13 @@
 
 <div class="emr-shell">
     <header class="emr-header">
-        <div class="brand">
-            <span class="brand-mark">⚕️</span>
-            <span class="brand-text">EMR Liên Chiểu</span>
-        </div>
+        <a href="/" class="brand">
+            <img src="/images/logo.png" alt="TTYT KV Liên Chiểu" class="brand-logo" onerror="this.style.display='none'" />
+            <span class="brand-text">
+                <span class="brand-line1">TTYT KV Liên Chiểu</span>
+                <span class="brand-line2">EMR & Ký số</span>
+            </span>
+        </a>
         <nav class="emr-nav">
             <AuthorizeView>
                 <Authorized>
@@ -25,7 +28,7 @@
         <div class="emr-user">
             <AuthorizeView>
                 <Authorized>
-                    <span class="u-name">@context.User.FindFirst("hoTen")?.Value</span>
+                    <a href="/profile" class="u-name" title="Tài khoản của tôi">@context.User.FindFirst("hoTen")?.Value</a>
                     <span class="u-khoa">@context.User.FindFirst("khoaTen")?.Value</span>
                     <form action="/auth/logout" method="post" style="display:inline">
                         <button type="submit" class="btn-link">Đăng xuất</button>

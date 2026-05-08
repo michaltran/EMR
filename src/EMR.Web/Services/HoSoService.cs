@@ -17,10 +17,11 @@ public class HoSoService(
     HoSoCodeGenerator codeGen,
     IDocumentSigner signer)
 {
-    public async Task<List<HoSoListVM>> ListAsync(Guid? khoaId, string? keyword, CancellationToken ct = default)
+    public async Task<List<HoSoListVM>> ListAsync(Guid? khoaId, string? keyword, TrangThaiHoSo? trangThai = null, CancellationToken ct = default)
     {
         var q = db.HoSoBenhAns.Include(h => h.Khoa).Include(h => h.TaiLieus).AsQueryable();
         if (khoaId.HasValue) q = q.Where(h => h.KhoaId == khoaId.Value);
+        if (trangThai.HasValue) q = q.Where(h => h.TrangThai == trangThai.Value);
         if (!string.IsNullOrWhiteSpace(keyword))
         {
             var k = keyword.Trim();
@@ -30,6 +31,9 @@ public class HoSoService(
             .Select(h => new HoSoListVM(h.Id, h.MaHoSo, h.MaBenhNhanHIS, h.HoTenBenhNhan, h.Khoa.Ten, h.TrangThai, h.TaiLieus.Count, h.NgayTao))
             .ToListAsync(ct);
     }
+
+    public async Task<List<Khoa>> GetKhoasAsync(CancellationToken ct = default) =>
+        await db.Khoas.OrderBy(k => k.ThuTu).ToListAsync(ct);
 
     public async Task<HoSoDetailVM?> GetDetailAsync(Guid id, CancellationToken ct = default)
     {

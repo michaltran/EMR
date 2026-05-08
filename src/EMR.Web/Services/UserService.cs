@@ -132,6 +132,24 @@ public class UserService(EmrDbContext db)
         return (true, null);
     }
 
+    public async Task<(bool Ok, string? Err)> DoiMatKhauAsync(Guid userId, string oldPassword, string newPassword, CancellationToken ct = default)
+    {
+        if (newPassword.Length < 6) return (false, "Mật khẩu mới tối thiểu 6 ký tự");
+        var u = await db.NguoiDungs.FirstOrDefaultAsync(x => x.Id == userId, ct);
+        if (u is null) return (false, "Không tìm thấy user");
+        if (!BCrypt.Net.BCrypt.Verify(oldPassword, u.MatKhauHash)) return (false, "Mật khẩu hiện tại không đúng");
+        u.MatKhauHash = BCrypt.Net.BCrypt.HashPassword(newPassword, workFactor: 11);
+        u.NgayCapNhat = DateTime.UtcNow;
+        db.AuditLogs.Add(new AuditLog
+        {
+            HanhDong = "DOI_MAT_KHAU",
+            ActorId = u.Id, ActorTen = u.HoTen,
+            LoaiDoiTuong = nameof(NguoiDung), DoiTuongId = u.Id
+        });
+        await db.SaveChangesAsync(ct);
+        return (true, null);
+    }
+
     public async Task<(bool Ok, string? Err)> ResetPasswordAsync(Guid userId, string newPassword, Guid actorId, CancellationToken ct = default)
     {
         if (newPassword.Length < 6) return (false, "Mật khẩu tối thiểu 6 ký tự");

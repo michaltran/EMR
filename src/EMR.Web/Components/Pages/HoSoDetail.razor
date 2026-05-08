@@ -155,10 +155,18 @@ else
                                                 @if (c.TrangThai == TrangThaiChuKy.DaKy)
                                                 {
                                                     <span class="ok">✓ @c.NgayHoanTat?.ToLocalTime():dd/MM HH:mm</span>
+                                                    @if (isAdmin)
+                                                    {
+                                                        <button class="btn-link err small" title="Hủy chữ ký (admin)" @onclick="() => OpenHuyDialog(c.Id)">[hủy]</button>
+                                                    }
                                                 }
                                                 else if (c.TrangThai == TrangThaiChuKy.ThatBai)
                                                 {
                                                     <span class="err" title="@c.LyDoLoi">✗ thất bại</span>
+                                                }
+                                                else if (c.TrangThai == TrangThaiChuKy.Huy)
+                                                {
+                                                    <span class="muted" title="@c.LyDoLoi">⊘ đã hủy</span>
                                                 }
                                             </li>
                                         }
@@ -185,6 +193,10 @@ else
                                     <span class="muted small" title="@avail.LyDoChan">Cần @avail.VaiTroKyKeTiep ký</span>
                                 }
                                 <button class="btn btn-sm" @onclick="() => OpenViewer(t.Id)">Xem</button>
+                                @if (t.ChuKys.All(c => c.TrangThai != TrangThaiChuKy.DaKy))
+                                {
+                                    <button class="btn btn-sm" title="Xóa tài liệu (chưa có chữ ký nào)" @onclick="() => DeleteTaiLieu(t.Id)">🗑</button>
+                                }
                             </td>
                         </tr>
                     }
@@ -210,6 +222,23 @@ else
             <iframe src="@($"/hoso/{Id}/file/{viewerTaiLieuId}")" style="width:100%;height:80vh;border:1px solid #ddd"></iframe>
         </div>
     }
+
+    @if (huyChuKyId is not null)
+    {
+        <div class="modal-backdrop" @onclick="CloseHuyDialog"></div>
+        <div class="modal">
+            <h3>Hủy chữ ký</h3>
+            <p class="muted small">Chữ ký vẫn được giữ trong DB với trạng thái "Đã hủy" + lý do, không xóa hẳn (giữ trail audit).</p>
+            <label>
+                <span>Lý do hủy *</span>
+                <input @bind="huyLyDo" placeholder="VD: ký nhầm tài liệu, sai tên BN..." />
+            </label>
+            <div style="display:flex;gap:.5rem;margin-top:.5rem">
+                <button class="btn btn-primary" @onclick="DoHuy" disabled="@busyHuy">@(busyHuy ? "Đang hủy..." : "Xác nhận hủy")</button>
+                <button class="btn" @onclick="CloseHuyDialog">Đóng</button>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -223,8 +252,12 @@ else
     private List<string> userRoles = [];
     private Guid currentUserId;
     private Guid? currentUserKhoaId;
+    private bool isAdmin;
     private string bmFilter = "";
     private bool onlyImported = false;
+    private Guid? huyChuKyId;
+    private string huyLyDo = "";
+    private bool busyHuy;
 
     private bool MatchesFilter(BieuMauTemplate bm)
     {
@@ -249,8 +282,33 @@ else
         var auth = await AuthState.GetAuthenticationStateAsync();
         currentUserId = Guid.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
         userRoles = auth.User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
+        isAdmin = userRoles.Contains("ADMIN");
         var khoa = auth.User.FindFirst("khoaId")?.Value;
         if (Guid.TryParse(khoa, out var k)) currentUserKhoaId = k;
+    }
+
+    private void OpenHuyDialog(Guid chuKyId) { huyChuKyId = chuKyId; huyLyDo = ""; lastError = null; lastInfo = null; }
+    private void CloseHuyDialog() { huyChuKyId = null; }
+
+    private async Task DoHuy()
+    {
+        if (huyChuKyId is null) return;
+        busyHuy = true;
+        try
+        {
+            var (ok, err) = await Svc.HuyChuKyAsync(huyChuKyId.Value, currentUserId, huyLyDo);
+            if (ok) { lastInfo = "Đã hủy chữ ký."; huyChuKyId = null; await Reload(); }
+            else lastError = err;
+        }
+        finally { busyHuy = false; }
+    }
+
+    private async Task DeleteTaiLieu(Guid taiLieuId)
+    {
+        lastError = null; lastInfo = null;
+        var (ok, err) = await Svc.XoaTaiLieuAsync(Id, taiLieuId, currentUserId);
+        if (ok) { lastInfo = "Đã xóa tài liệu."; await Reload(); }
+        else lastError = err;
     }
 
     protected override async Task OnParametersSetAsync()

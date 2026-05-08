@@ -8,39 +8,62 @@
 
 <section class="page-head">
     <h1>Hồ sơ bệnh án</h1>
-    <div class="actions">
-        <input @bind="keyword" @bind:event="oninput" placeholder="Tìm theo mã hồ sơ, tên BN, mã BN..." class="input-search" />
-        <a href="/hoso/moi" class="btn btn-primary">+ Tạo hồ sơ mới</a>
-    </div>
+    <a href="/hoso/moi" class="btn btn-primary">+ Tạo hồ sơ mới</a>
 </section>
+
+<div class="card">
+    <div class="form-row">
+        <input @bind="keyword" @bind:event="oninput" placeholder="Mã HS, tên BN, mã BN..." class="input-search" />
+        <select @bind="filterKhoa">
+            <option value="">— Mọi khoa —</option>
+            @foreach (var k in khoas)
+            {
+                <option value="@k.Id">@k.Ten</option>
+            }
+        </select>
+        <select @bind="filterTT">
+            <option value="">— Mọi trạng thái —</option>
+            <option value="0">Nháp</option>
+            <option value="1">Chờ ký</option>
+            <option value="2">BS đã ký</option>
+            <option value="3">TK đã ký</option>
+            <option value="4">LĐ đã ký</option>
+            <option value="9">Hoàn tất</option>
+            <option value="99">Đã hủy</option>
+        </select>
+        <button class="btn btn-primary" @onclick="Reload">Lọc</button>
+        <button class="btn" @onclick="Reset">Xóa lọc</button>
+        <span class="muted small" style="margin-left:auto">@(items?.Count ?? 0) HSBA</span>
+    </div>
+</div>
 
 @if (items is null)
 {
-    <p>Đang tải…</p>
+    <p style="margin-top:1rem">Đang tải…</p>
 }
-else if (Filtered().Count == 0)
+else if (items.Count == 0)
 {
     <div class="empty-state">
-        <p>Chưa có hồ sơ nào.</p>
-        <a href="/hoso/moi" class="btn btn-primary">+ Tạo hồ sơ đầu tiên</a>
+        <p>Không có hồ sơ nào khớp tiêu chí.</p>
+        <a href="/hoso/moi" class="btn btn-primary">+ Tạo hồ sơ</a>
     </div>
 }
 else
 {
-    <table class="data-table">
+    <table class="data-table" style="margin-top:1rem">
         <thead>
         <tr>
             <th>Mã HS</th><th>Bệnh nhân</th><th>Mã BN</th><th>Khoa</th>
-            <th>Trạng thái</th><th>Số tài liệu</th><th>Ngày tạo</th><th></th>
+            <th>Trạng thái</th><th>Tài liệu</th><th>Ngày tạo</th><th></th>
         </tr>
         </thead>
         <tbody>
-        @foreach (var h in Filtered())
+        @foreach (var h in items)
         {
             <tr>
                 <td><strong>@h.MaHoSo</strong></td>
                 <td>@h.HoTenBenhNhan</td>
-                <td>@h.MaBenhNhanHIS</td>
+                <td><code>@h.MaBenhNhanHIS</code></td>
                 <td>@h.KhoaTen</td>
                 <td><span class="status status-@h.TrangThai.ToString().ToLower()">@TrangThaiText(h.TrangThai)</span></td>
                 <td>@h.SoTaiLieu</td>
@@ -54,22 +77,28 @@ else
 
 @code {
     private List<HoSoListVM>? items;
+    private List<Khoa> khoas = [];
     private string keyword = "";
+    private string filterKhoa = "";
+    private string filterTT = "";
 
     protected override async Task OnInitializedAsync()
     {
-        items = await Svc.ListAsync(null, null);
+        khoas = await Svc.GetKhoasAsync();
+        await Reload();
     }
 
-    private List<HoSoListVM> Filtered()
+    private async Task Reload()
     {
-        if (items is null) return [];
-        if (string.IsNullOrWhiteSpace(keyword)) return items;
-        var k = keyword.Trim().ToLowerInvariant();
-        return items.Where(h =>
-            h.MaHoSo.ToLower().Contains(k) ||
-            h.HoTenBenhNhan.ToLower().Contains(k) ||
-            h.MaBenhNhanHIS.ToLower().Contains(k)).ToList();
+        Guid? khoaId = Guid.TryParse(filterKhoa, out var k) ? k : null;
+        TrangThaiHoSo? tt = byte.TryParse(filterTT, out var b) ? (TrangThaiHoSo)b : null;
+        items = await Svc.ListAsync(khoaId, keyword, tt);
+    }
+
+    private async Task Reset()
+    {
+        keyword = ""; filterKhoa = ""; filterTT = "";
+        await Reload();
     }
 
     private static string TrangThaiText(TrangThaiHoSo t) => t switch
