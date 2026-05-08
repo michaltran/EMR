@@ -5,10 +5,11 @@ namespace EMR.Web.Catalog;
 /// Mã form theo BYT (vd "01/BV2") được giữ nguyên trong cột MaBYT để đối chiếu.
 /// </summary>
 /// <param name="Ma">Mã nội bộ (lưu vào TaiLieu.LoaiTaiLieu) — chỉ chữ thường + dấu gạch dưới</param>
-/// <param name="MaBYT">Mã BYT chính thức (vd "01/BV2", "PL28-NK") — null nếu không có</param>
+/// <param name="MaBYT">Mã BYT chính thức TT 32/2023 (vd "01/BV2", "PL28-NK") — null nếu không có</param>
+/// <param name="MaCu">Mã BYT cũ TT 56/2017 (vd "01/BV-01", "29/BV-02") — BV TTYT Liên Chiểu hiện đang dùng mã này</param>
 /// <param name="Ten">Tên hiển thị</param>
 /// <param name="MoTa">Mô tả ngắn</param>
-/// <param name="Nhom">Nhóm phân loại UI: BENH_AN | KHAM_VAO_VIEN | XET_NGHIEM | CDHA | PHAU_THUAT_THU_THUAT | THEO_DOI_CHAM_SOC | CAM_KET | HOI_CHAN_TU_VONG | RA_VIEN | KHAC</param>
+/// <param name="Nhom">Nhóm phân loại UI</param>
 /// <param name="VaiTroKyTuanTu">Thứ tự vai trò ký bắt buộc (rỗng = không bắt buộc ký)</param>
 /// <param name="BatBuoc">Có bắt buộc trong HSBA nội trú điển hình không</param>
 public record BieuMauTemplate(
@@ -18,7 +19,8 @@ public record BieuMauTemplate(
     string MoTa,
     string Nhom,
     string[] VaiTroKyTuanTu,
-    bool BatBuoc);
+    bool BatBuoc,
+    string? MaCu = null);
 
 public static class BieuMauCatalog
 {
@@ -53,11 +55,11 @@ public static class BieuMauCatalog
         // ============================================================
         // PHỤ LỤC XXVIII — MẪU BỆNH ÁN (24 mẫu)
         // ============================================================
-        new("BA_NOIKHOA",        "PL28-NK",  "Bệnh án Nội khoa",                  "Mẫu bệnh án nội trú khoa Nội",                                GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: true),
+        new("BA_NOIKHOA",        "PL28-NK",  "Bệnh án Nội khoa",                  "Mẫu bệnh án nội trú khoa Nội",                                GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: true, MaCu: "01/BV-01"),
         new("BA_NHIKHOA",        "PL28-NhK", "Bệnh án Nhi khoa",                  "Mẫu bệnh án nội trú khoa Nhi",                                GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false),
         new("BA_TRUYEN_NHIEM",   "PL28-TN",  "Bệnh án Truyền nhiễm",              "Mẫu bệnh án truyền nhiễm",                                    GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false),
         new("BA_PHU_KHOA",       "PL28-PhK", "Bệnh án Phụ khoa",                  "Mẫu bệnh án phụ khoa",                                        GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false),
-        new("BA_SAN_KHOA",       "PL28-SK",  "Bệnh án Sản khoa",                  "Mẫu bệnh án sản khoa",                                        GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false),
+        new("BA_SAN_KHOA",       "PL28-SK",  "Bệnh án Sản khoa",                  "Mẫu bệnh án sản khoa",                                        GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false, MaCu: "04/BV-01"),
         new("BA_SO_SINH",        "PL28-SS",  "Bệnh án Sơ sinh",                   "Mẫu bệnh án sơ sinh",                                         GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false),
         new("BA_TAM_THAN",       "PL28-TT",  "Bệnh án Tâm thần",                  "Mẫu bệnh án tâm thần",                                        GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false),
         new("BA_DA_LIEU",        "PL28-DL",  "Bệnh án Da liễu",                   "Mẫu bệnh án da liễu",                                         GROUP_BENH_AN, WF_BS_TK_LD, BatBuoc: false),
@@ -148,6 +150,18 @@ public static class BieuMauCatalog
         // -- Ra viện / Tóm tắt HSBA --
         new("PYL_52",  "52/BV2", "Bản tóm tắt hồ sơ bệnh án (CV-01)",           "Tóm tắt HSBA — bắt buộc khi ra viện/chuyển tuyến",       GROUP_RA_VIEN, WF_BS_TK_LD, BatBuoc: true),
         new("PYL_53",  "53/BV2", "Đề nghị cung cấp tóm tắt HSBA / tài liệu",    "Đề nghị cung cấp tóm tắt HSBA",                          GROUP_RA_VIEN, WF_BS,       BatBuoc: false),
+
+        // ============================================================
+        // BV TTYT Liên Chiểu — biểu mẫu nội bộ ngoài TT 32/2023
+        // ============================================================
+        new("PYL_BV_10",   null,  "Phiếu công khai thuốc nội trú",     "Phiếu công khai thuốc/VTYT nội trú (mẫu BV)",     GROUP_THEO_DOI, WF_BS,    BatBuoc: false, MaCu: "10/BV-01"),
+        new("PYL_BV_17",   null,  "Phiếu công khai chi phí KCB",       "Công khai chi phí KCB cho BN/BHYT (mẫu BV)",      GROUP_KHAC,     WF_NONE,  BatBuoc: false, MaCu: "17/BV-01"),
+
+        // ============================================================
+        // HSBA TỔNG (mode upload nguyên file PDF từ HIS FPT)
+        // ============================================================
+        new("HSBA_TONG",   null,  "HSBA tổng (1 file PDF từ HIS)",     "Bộ HSBA in ra từ HIS FPT, ký 1 chữ ký cho cả file (workflow hiện tại của BV trước khi tách per-form)",
+            GROUP_KHAC, WF_BS_TK_LD, BatBuoc: false),
 
         // ============================================================
         // KHÁC (không thuộc 82 mẫu chuẩn)
