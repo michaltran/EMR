@@ -1,0 +1,243 @@
+@page "/hoso/{Id:guid}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Forms
+@inject HoSoService Svc
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthState
+@inject IJSRuntime JS
+
+<PageTitle>Hồ sơ @vm?.HoSo.MaHoSo</PageTitle>
+
+@if (vm is null)
+{
+    <p>Đang tải…</p>
+}
+else
+{
+    <section class="page-head">
+        <div>
+            <a href="/hoso" class="btn-link">‹ Danh sách</a>
+            <h1>Hồ sơ @vm.HoSo.MaHoSo</h1>
+        </div>
+        <span class="status status-@vm.HoSo.TrangThai.ToString().ToLower()">@TrangThaiText(vm.HoSo.TrangThai)</span>
+    </section>
+
+    <div class="grid-2">
+        <div class="card">
+            <h3>Bệnh nhân</h3>
+            <dl class="kv">
+                <dt>Họ tên</dt><dd><strong>@vm.HoSo.HoTenBenhNhan</strong></dd>
+                <dt>Mã BN (HIS)</dt><dd><code>@vm.HoSo.MaBenhNhanHIS</code></dd>
+                <dt>Ngày sinh</dt><dd>@vm.HoSo.NgaySinh?.ToString("dd/MM/yyyy")</dd>
+                <dt>Giới tính</dt><dd>@(vm.HoSo.GioiTinh == 1 ? "Nam" : vm.HoSo.GioiTinh == 0 ? "Nữ" : "—")</dd>
+                <dt>Khoa</dt><dd>@vm.HoSo.Khoa.Ten</dd>
+                <dt>BS tạo</dt><dd>@vm.HoSo.BacSiTao.HoTen</dd>
+                <dt>Ngày tạo</dt><dd>@vm.HoSo.NgayTao.ToLocalTime():dd/MM/yyyy HH:mm</dd>
+            </dl>
+        </div>
+
+        <div class="card">
+            <h3>Tổng quan biểu mẫu</h3>
+            <p class="muted">@vm.TaiLieus.Count tài liệu — @vm.TaiLieus.Count(t => t.TrangThaiKy == TrangThaiKyTaiLieu.DaKy) đã ký</p>
+            @if (lastError is not null)
+            {
+                <div class="alert alert-error">@lastError</div>
+            }
+            @if (lastInfo is not null)
+            {
+                <div class="alert alert-info">@lastInfo</div>
+            }
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem">
+        <h3>Biểu mẫu trong hồ sơ</h3>
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>Loại biểu mẫu</th>
+                <th>File</th>
+                <th>Trạng thái</th>
+                <th>Chữ ký</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var bm in BieuMauCatalog.Items)
+            {
+                var existing = vm.TaiLieus.Where(t => t.LoaiTaiLieu == bm.Ma).ToList();
+                @if (existing.Count == 0)
+                {
+                    <tr>
+                        <td>
+                            <strong>@bm.Ten</strong>
+                            <div class="muted small">@bm.MoTa</div>
+                        </td>
+                        <td><span class="muted">— chưa có —</span></td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>
+                            <InputFile OnChange="e => OnImport(e, bm.Ma)" accept="application/pdf" class="input-file" />
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var t in existing)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@bm.Ten</strong>
+                                <div class="muted small">@t.TenFile (@FormatSize(t.KichThuoc))</div>
+                            </td>
+                            <td>
+                                <a href="@($"/hoso/{Id}/file/{t.Id}")" target="_blank" class="btn-link">Xem PDF</a>
+                            </td>
+                            <td>
+                                <span class="status status-@t.TrangThaiKy.ToString().ToLower()">
+                                    @TrangThaiKyText(t.TrangThaiKy)
+                                </span>
+                            </td>
+                            <td>
+                                @if (t.ChuKys.Count == 0)
+                                {
+                                    <span class="muted">—</span>
+                                }
+                                else
+                                {
+                                    <ul class="signers">
+                                        @foreach (var c in t.ChuKys.OrderBy(c => c.NgayYeuCau))
+                                        {
+                                            <li>
+                                                <strong>@c.VaiTroKy</strong>: @c.NguoiKy.HoTen
+                                                @if (c.TrangThai == TrangThaiChuKy.DaKy)
+                                                {
+                                                    <span class="ok">✓ @c.NgayHoanTat?.ToLocalTime():dd/MM HH:mm</span>
+                                                }
+                                                else if (c.TrangThai == TrangThaiChuKy.ThatBai)
+                                                {
+                                                    <span class="err" title="@c.LyDoLoi">✗ thất bại</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" disabled="@(busyTaiLieu == t.Id)"
+                                        @onclick="() => Sign(t.Id, bm.VaiTroKyChinh)">
+                                    @(busyTaiLieu == t.Id ? "Đang ký…" : $"Ký ({bm.VaiTroKyChinh})")
+                                </button>
+                                <button class="btn btn-sm" @onclick="() => OpenViewer(t.Id)">Xem</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+            </tbody>
+        </table>
+        <p class="muted small" style="margin-top:.5rem">
+            Mọi biểu mẫu đều có thể có nhiều chữ ký (BS → TK → LĐ). Nút "Ký" sẽ ký với vai trò chính của loại biểu mẫu;
+            sau đó cấp khác có thể tiếp tục ký vào cùng tài liệu.
+        </p>
+    </div>
+
+    @if (viewerTaiLieuId is not null)
+    {
+        <div class="card" style="margin-top:1rem">
+            <h3>Xem PDF</h3>
+            <button class="btn btn-link" @onclick="() => viewerTaiLieuId = null">Đóng</button>
+            <iframe src="@($"/hoso/{Id}/file/{viewerTaiLieuId}")" style="width:100%;height:80vh;border:1px solid #ddd"></iframe>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private HoSoDetailVM? vm;
+    private string? lastError;
+    private string? lastInfo;
+    private Guid? busyTaiLieu;
+    private Guid? viewerTaiLieuId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        vm = await Svc.GetDetailAsync(Id);
+        if (vm is null) Nav.NavigateTo("/hoso");
+    }
+
+    private async Task<Guid> CurrentUserId()
+    {
+        var auth = await AuthState.GetAuthenticationStateAsync();
+        return Guid.Parse(auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+    }
+
+    private async Task OnImport(InputFileChangeEventArgs e, string loaiTL)
+    {
+        lastError = null; lastInfo = null;
+        var f = e.File;
+        if (f is null) return;
+        if (f.ContentType != "application/pdf" && !f.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            lastError = "Chỉ chấp nhận file PDF"; return;
+        }
+        if (f.Size > 50 * 1024 * 1024) { lastError = "File > 50MB"; return; }
+
+        try
+        {
+            var uid = await CurrentUserId();
+            await using var s = f.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            await Svc.ImportBieuMauAsync(Id, loaiTL, f.Name, s, uid);
+            lastInfo = $"Đã import {f.Name} vào biểu mẫu {BieuMauCatalog.Find(loaiTL)?.Ten}";
+            await Reload();
+        }
+        catch (Exception ex) { lastError = ex.Message; }
+    }
+
+    private async Task Sign(Guid taiLieuId, string vaiTroKy)
+    {
+        lastError = null; lastInfo = null;
+        busyTaiLieu = taiLieuId;
+        try
+        {
+            var uid = await CurrentUserId();
+            var (ok, err) = await Svc.KyTaiLieuAsync(Id, taiLieuId, vaiTroKy, uid);
+            if (ok) lastInfo = $"Đã ký với vai trò {vaiTroKy}";
+            else lastError = "Ký thất bại: " + err;
+            await Reload();
+        }
+        finally { busyTaiLieu = null; }
+    }
+
+    private void OpenViewer(Guid taiLieuId) => viewerTaiLieuId = taiLieuId;
+
+    private static string FormatSize(long b) => b < 1024 ? $"{b} B" : b < 1024 * 1024 ? $"{b / 1024.0:F1} KB" : $"{b / 1024.0 / 1024:F1} MB";
+
+    private static string TrangThaiText(TrangThaiHoSo t) => t switch
+    {
+        TrangThaiHoSo.Draft => "Nháp",
+        TrangThaiHoSo.ChoKy => "Chờ ký",
+        TrangThaiHoSo.DaKyBacSi => "BS đã ký",
+        TrangThaiHoSo.DaKyTruongKhoa => "TK đã ký",
+        TrangThaiHoSo.DaKyLanhDao => "LĐ đã ký",
+        TrangThaiHoSo.HoanTat => "Hoàn tất",
+        TrangThaiHoSo.Huy => "Đã hủy",
+        _ => t.ToString()
+    };
+
+    private static string TrangThaiKyText(TrangThaiKyTaiLieu t) => t switch
+    {
+        TrangThaiKyTaiLieu.ChuaKy => "Chưa ký",
+        TrangThaiKyTaiLieu.DangKy => "Đang ký",
+        TrangThaiKyTaiLieu.DaKy => "Đã ký",
+        TrangThaiKyTaiLieu.Loi => "Lỗi",
+        _ => t.ToString()
+    };
+}

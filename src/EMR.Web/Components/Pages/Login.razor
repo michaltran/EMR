@@ -1,0 +1,47 @@
+@page "/login"
+@layout EMR.Web.Components.Layout.EmptyLayout
+@attribute [AllowAnonymous]
+
+<PageTitle>Đăng nhập - EMR Liên Chiểu</PageTitle>
+
+<div class="login-shell">
+    <form class="login-card" method="post" action="/auth/login">
+        <div class="login-brand">
+            <span class="brand-mark">⚕️</span>
+            <h1>EMR Liên Chiểu</h1>
+            <p class="muted">Hệ thống ký số bệnh án điện tử</p>
+        </div>
+
+        @if (Err == "1")
+        {
+            <div class="alert alert-error">Sai tên đăng nhập hoặc mật khẩu</div>
+        }
+
+        <label>
+            <span>Tên đăng nhập</span>
+            <input name="tenDangNhap" autocomplete="username" required autofocus />
+        </label>
+        <label>
+            <span>Mật khẩu</span>
+            <input name="matKhau" type="password" autocomplete="current-password" required />
+        </label>
+        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+        <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+
+        <details class="login-help">
+            <summary>Tài khoản test (môi trường dev)</summary>
+            <ul>
+                <li><code>admin / admin@123</code> — Quản trị</li>
+                <li><code>bs.an / bs@123</code> — Bác sĩ Khoa Nội</li>
+                <li><code>tk.binh / tk@123</code> — Trưởng khoa Nội</li>
+                <li><code>ld.cuong / ld@123</code> — Lãnh đạo BV</li>
+                <li><code>khth.dung / khth@123</code> — Phòng KHNV</li>
+            </ul>
+        </details>
+    </form>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? Err { get; set; }
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+}

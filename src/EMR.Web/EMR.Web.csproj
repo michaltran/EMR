@@ -2,6 +2,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\EMR.Domain\EMR.Domain.csproj" />
+    <ProjectReference Include="..\EMR.Infrastructure\EMR.Infrastructure.csproj" />
+    <ProjectReference Include="..\EMR.Signing\EMR.Signing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
   </ItemGroup>
 
   <PropertyGroup>

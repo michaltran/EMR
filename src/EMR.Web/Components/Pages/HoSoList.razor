@@ -1,0 +1,86 @@
+@page "/hoso"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject HoSoService Svc
+@inject NavigationManager Nav
+
+<PageTitle>Hồ sơ bệnh án</PageTitle>
+
+<section class="page-head">
+    <h1>Hồ sơ bệnh án</h1>
+    <div class="actions">
+        <input @bind="keyword" @bind:event="oninput" placeholder="Tìm theo mã hồ sơ, tên BN, mã BN..." class="input-search" />
+        <a href="/hoso/moi" class="btn btn-primary">+ Tạo hồ sơ mới</a>
+    </div>
+</section>
+
+@if (items is null)
+{
+    <p>Đang tải…</p>
+}
+else if (Filtered().Count == 0)
+{
+    <div class="empty-state">
+        <p>Chưa có hồ sơ nào.</p>
+        <a href="/hoso/moi" class="btn btn-primary">+ Tạo hồ sơ đầu tiên</a>
+    </div>
+}
+else
+{
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>Mã HS</th><th>Bệnh nhân</th><th>Mã BN</th><th>Khoa</th>
+            <th>Trạng thái</th><th>Số tài liệu</th><th>Ngày tạo</th><th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var h in Filtered())
+        {
+            <tr>
+                <td><strong>@h.MaHoSo</strong></td>
+                <td>@h.HoTenBenhNhan</td>
+                <td>@h.MaBenhNhanHIS</td>
+                <td>@h.KhoaTen</td>
+                <td><span class="status status-@h.TrangThai.ToString().ToLower()">@TrangThaiText(h.TrangThai)</span></td>
+                <td>@h.SoTaiLieu</td>
+                <td>@h.NgayTao.ToLocalTime():dd/MM/yyyy HH:mm</td>
+                <td><a href="@($"/hoso/{h.Id}")" class="btn btn-sm">Mở</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<HoSoListVM>? items;
+    private string keyword = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = await Svc.ListAsync(null, null);
+    }
+
+    private List<HoSoListVM> Filtered()
+    {
+        if (items is null) return [];
+        if (string.IsNullOrWhiteSpace(keyword)) return items;
+        var k = keyword.Trim().ToLowerInvariant();
+        return items.Where(h =>
+            h.MaHoSo.ToLower().Contains(k) ||
+            h.HoTenBenhNhan.ToLower().Contains(k) ||
+            h.MaBenhNhanHIS.ToLower().Contains(k)).ToList();
+    }
+
+    private static string TrangThaiText(TrangThaiHoSo t) => t switch
+    {
+        TrangThaiHoSo.Draft => "Nháp",
+        TrangThaiHoSo.ChoKy => "Chờ ký",
+        TrangThaiHoSo.DaKyBacSi => "BS đã ký",
+        TrangThaiHoSo.DaKyTruongKhoa => "TK đã ký",
+        TrangThaiHoSo.DaKyLanhDao => "LĐ đã ký",
+        TrangThaiHoSo.HoanTat => "Hoàn tất",
+        TrangThaiHoSo.Huy => "Đã hủy",
+        _ => t.ToString()
+    };
+}

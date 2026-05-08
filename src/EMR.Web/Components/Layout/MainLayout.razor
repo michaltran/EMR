@@ -1,9 +1,38 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
-@Body
+<div class="emr-shell">
+    <header class="emr-header">
+        <div class="brand">
+            <span class="brand-mark">⚕️</span>
+            <span class="brand-text">EMR Liên Chiểu</span>
+        </div>
+        <nav class="emr-nav">
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/hoso">Hồ sơ bệnh án</a>
+                    <a href="/hoso/moi">+ Tạo mới</a>
+                </Authorized>
+            </AuthorizeView>
+        </nav>
+        <div class="emr-user">
+            <AuthorizeView>
+                <Authorized>
+                    <span class="u-name">@context.User.FindFirst("hoTen")?.Value</span>
+                    <span class="u-khoa">@context.User.FindFirst("khoaTen")?.Value</span>
+                    <form action="/auth/logout" method="post" style="display:inline">
+                        <button type="submit" class="btn-link">Đăng xuất</button>
+                    </form>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </header>
+    <main class="emr-main">
+        @Body
+    </main>
+</div>
 
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
+    Đã xảy ra lỗi không mong muốn.
+    <a href="" class="reload">Tải lại</a>
     <a class="dismiss">🗙</a>
 </div>
