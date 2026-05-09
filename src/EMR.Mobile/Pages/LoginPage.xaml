@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="EMR.Mobile.Pages.LoginPage"
+             Title="Đăng nhập"
+             BackgroundColor="#f5f7fa">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16" VerticalOptions="Center">
+            <Image Source="logo.png" HeightRequest="120" Aspect="AspectFit" Margin="0,40,0,16" />
+            <Label Text="EMR Liên Chiểu" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" TextColor="#0d6efd"/>
+            <Label Text="TTYT KV Liên Chiểu — Bệnh án điện tử &amp; Ký số" FontSize="13" HorizontalOptions="Center" TextColor="#6c757d"/>
+
+            <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True" Margin="0,16,0,0">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Server URL" FontSize="12" TextColor="#6c757d"/>
+                    <Entry x:Name="ServerEntry" Placeholder="http://10.0.2.2:5099" />
+
+                    <Label Text="Tên đăng nhập" FontSize="12" TextColor="#6c757d"/>
+                    <Entry x:Name="UserEntry" Placeholder="vd: bs.an" />
+
+                    <Label Text="Mật khẩu" FontSize="12" TextColor="#6c757d"/>
+                    <Entry x:Name="PassEntry" Placeholder="••••••" IsPassword="True" />
+
+                    <Label x:Name="ErrLabel" TextColor="#dc3545" FontSize="13" IsVisible="False"/>
+
+                    <Button x:Name="LoginBtn" Text="Đăng nhập" BackgroundColor="#0d6efd" TextColor="White" Clicked="OnLogin"/>
+
+                    <Label Text="Tài khoản test:" FontSize="11" TextColor="#6c757d" Margin="0,12,0,0"/>
+                    <Label Text="bs.an / bs@123 — BS Khoa Nội" FontSize="11" TextColor="#6c757d"/>
+                    <Label Text="admin / admin@123 — Quản trị" FontSize="11" TextColor="#6c757d"/>
+                </VerticalStackLayout>
+            </Frame>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

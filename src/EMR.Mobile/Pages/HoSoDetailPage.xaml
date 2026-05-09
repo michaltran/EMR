@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:svc="clr-namespace:EMR.Mobile.Services"
+             x:Class="EMR.Mobile.Pages.HoSoDetailPage"
+             Title="Chi tiết HSBA">
+    <ScrollView>
+        <VerticalStackLayout Padding="12" Spacing="10">
+            <ActivityIndicator x:Name="Loading" IsRunning="True" />
+
+            <Frame x:Name="InfoCard" IsVisible="False" Padding="14" CornerRadius="8" HasShadow="False" BorderColor="#e3e6eb" BackgroundColor="White">
+                <VerticalStackLayout Spacing="6">
+                    <Label x:Name="MaHoSoLbl" FontSize="18" FontAttributes="Bold" TextColor="#0d6efd"/>
+                    <Label x:Name="BenhNhanLbl" FontSize="15"/>
+                    <Label x:Name="KhoaLbl" FontSize="12" TextColor="#6c757d"/>
+                    <Label x:Name="TrangThaiLbl" FontSize="11" TextColor="White" BackgroundColor="#0d6efd" Padding="6,2" HorizontalOptions="Start"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <Label Text="Tài liệu / biểu mẫu" FontAttributes="Bold" FontSize="14" Margin="0,8,0,4"/>
+            <CollectionView x:Name="TaiLieuList">
+                <CollectionView.EmptyView>
+                    <Label Text="Chưa có tài liệu nào." FontSize="13" TextColor="#6c757d" HorizontalOptions="Center" Padding="20"/>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="svc:TaiLieuItem">
+                        <Frame Margin="0,4" Padding="12" CornerRadius="8" HasShadow="False" BorderColor="#e3e6eb" BackgroundColor="White">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+                                <Label Grid.Row="0" Grid.Column="0" Text="{Binding LoaiTaiLieu}" FontAttributes="Bold" FontSize="14"/>
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding TrangThaiKy}" FontSize="11" TextColor="White" BackgroundColor="#198754" Padding="6,2"/>
+                                <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Text="{Binding TenFile}" FontSize="12" TextColor="#6c757d"/>
+                                <Button Grid.Row="2" Grid.Column="0" Text="Xem PDF" FontSize="13" Padding="8,4" Margin="0,8,0,0" HorizontalOptions="Start" CommandParameter="{Binding Id}" Clicked="OnXemPdf"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

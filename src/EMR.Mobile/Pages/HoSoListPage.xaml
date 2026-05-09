@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:svc="clr-namespace:EMR.Mobile.Services"
+             x:Class="EMR.Mobile.Pages.HoSoListPage"
+             Title="Hồ sơ bệnh án">
+    <Grid RowDefinitions="Auto,*">
+        <SearchBar x:Name="SearchBox" Placeholder="Tìm theo mã/tên BN..." TextChanged="OnSearchChanged"/>
+
+        <RefreshView Grid.Row="1" x:Name="Refresher" Refreshing="OnRefresh">
+            <CollectionView x:Name="HoSoList" ItemsSource="{Binding}" SelectionMode="Single" SelectionChanged="OnItemSelected">
+                <CollectionView.EmptyView>
+                    <VerticalStackLayout Padding="24" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Label Text="Không có hồ sơ nào." FontSize="14" TextColor="#6c757d"/>
+                    </VerticalStackLayout>
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="svc:HoSoListItem">
+                        <Frame Margin="8,4" Padding="12" CornerRadius="8" HasShadow="False" BorderColor="#e3e6eb" BackgroundColor="White">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                <Label Grid.Row="0" Grid.Column="0" Text="{Binding HoTenBenhNhan}" FontAttributes="Bold" FontSize="15"/>
+                                <Label Grid.Row="0" Grid.Column="1" Text="{Binding MaHoSo}" FontSize="13" TextColor="#0d6efd" FontAttributes="Bold"/>
+                                <Label Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" FontSize="12" TextColor="#6c757d">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding KhoaTen}"/>
+                                            <Span Text=" • "/>
+                                            <Span Text="{Binding SoTaiLieu}"/>
+                                            <Span Text=" tài liệu"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label Grid.Row="2" Grid.Column="0" Text="{Binding TrangThai}" FontSize="11" TextColor="White" BackgroundColor="#0d6efd" Padding="6,2" HorizontalOptions="Start"/>
+                                <Label Grid.Row="2" Grid.Column="1" Text="{Binding NgayTao, StringFormat='{0:dd/MM HH:mm}'}" FontSize="11" TextColor="#6c757d"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>
